@@ -25,17 +25,16 @@ IS_UASYNCIO_V3 = hasattr(asyncio, "__version__") and asyncio.__version__ >= (3,)
 
 
 # Access point settings
-SERVER_SSID = 'myssid'  # max 32 characters
 SERVER_IP = '10.0.0.1'
 SERVER_SUBNET = '255.255.255.0'
 
 
-def wifi_start_access_point():
+def wifi_start_access_point(essid):
     """ setup the access point """
     wifi = network.WLAN(network.AP_IF)
     wifi.active(True)
     wifi.ifconfig((SERVER_IP, SERVER_SUBNET, SERVER_IP, SERVER_IP))
-    wifi.config(essid=SERVER_SSID, authmode=network.AUTH_OPEN)
+    wifi.config(essid=essid, authmode=network.AUTH_OPEN)
     print('Network config:', wifi.ifconfig())
 
 
@@ -74,7 +73,7 @@ class DNSQuery:
 
 
 class MyApp:
-    async def start(self):
+    async def start(self, essid='myssid'):
         # Get the event loop
         loop = asyncio.get_event_loop()
 
@@ -83,7 +82,7 @@ class MyApp:
             loop.set_exception_handler(_handle_exception)
 
         # Start the wifi AP
-        wifi_start_access_point()
+        wifi_start_access_point(essid)
 
         # Create the server and add task to event loop
         server = asyncio.start_server(self.handle_http_connection, "0.0.0.0", 80)
@@ -148,23 +147,3 @@ class MyApp:
                 await asyncio.sleep_ms(3000)
 
         udps.close()
-
-
-# Main code entrypoint
-try:
-    # Instantiate app and run
-    myapp = MyApp()
-
-    if IS_UASYNCIO_V3:
-        asyncio.run(myapp.start())
-    else:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(myapp.start())
-
-except KeyboardInterrupt:
-    print('Bye')
-
-finally:
-    if IS_UASYNCIO_V3:
-        asyncio.new_event_loop()  # Clear retained state
-
