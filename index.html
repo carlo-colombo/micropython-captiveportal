@@ -1,14 +1,55 @@
 <!doctype html>
 <html>
-    <head>
-        <title>Hello World!</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta charset="utf8">
-    </head>
-    <body>
-        <h2 class="title">Hello Title!</h2>
-        <div>
-            Hello Div!
-        </div>
-    </body>
+
+<head>
+    <title>64 Thermometer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf8">
+    <link rel="stylesheet" href="/static/mvp.css">
+</head>
+
+<body>
+    <section>
+        <h1 class="title">Captive Portal</h1>
+    </section>
+    <section>
+        <form method="POST" action="/save">
+            <header>
+                <h2>WiFi Credentials</h2>
+            </header>
+            <label for="ssid">SSID</label>
+            <select name="ssid">
+            </select>
+
+            <label for="password">Password</label>
+            <input type="text" name="password" size="20" placeholder="password">
+
+            <button type="submit">Save</button>
+        </form>
+    </section>
+
+    <script>
+        const qs = location.search;
+        const params = new URLSearchParams(qs);
+
+        if (params.has('credentials-stored')) {
+            alert('Credentials has been stored, please reset');
+        }
+
+
+        fetch('/api/networks')
+            .then(r => r.json())
+            .then(networks => {
+                const sel = document.querySelector('select[name=ssid]')
+                networks.forEach(({ name }) => {
+                    const opt = document.createElement('option')
+                    opt.value = name
+                    opt.innerText = name
+
+                    sel.appendChild(opt)
+                });
+            })
+    </script>
+</body>
+
 </html>

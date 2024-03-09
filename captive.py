@@ -57,10 +57,9 @@ class DNSQuery:
                 self.domain += data[ini + 1:ini + lon + 1].decode('utf-8') + '.'
                 ini += lon + 1
                 lon = data[ini]
-        print("DNSQuery domain:" + self.domain)
+        # print("DNSQuery domain:" + self.domain)
 
     def response(self, ip):
-        print("DNSQuery response: {} ==> {}".format(self.domain, ip))
         if self.domain:
             packet = self.data[:2] + b'\x81\x80'
             packet += self.data[4:6] + self.data[4:6] + b'\x00\x00\x00\x00'  # Questions and Answers Counts
@@ -76,10 +75,6 @@ from microdot import Microdot, send_file, redirect
 
 app = Microdot()
 
-@app.route('/')
-async def index(request):
-    return send_file('index.html')
-
 @app.route("/generate_204")
 async def index(request):
     return redirect("/")
@@ -91,16 +86,40 @@ async def save(req):
         creds.write(req.form.get('password'))
     return redirect("/?credentials-stored")
 
+@app.route('/static/<path:path>')
+async def static(request, path):
+    print(path)
+    if '..' in path:
+        # directory traversal is not allowed
+        return 'Not found', 404
+    return send_file('static/' + path)
+
+@app.route('/api/networks')
+async def list_networks(req):
+    return [{'name': w[0]} for w in networks]
+
+@app.route('/')
+async def index(request):
+    return send_file('index.html')
+
 async def start_server():
     return await app.start_server(debug=True, port=80)
 
 class MyApp:
-    async def start(self, essid='myssid'):
+    async def start(self, essid='captive portal ssid'):
         # Get the event loop
         loop = asyncio.get_event_loop()
 
         # Add global exception handler
         loop.set_exception_handler(_handle_exception)
+        
+        global networks
+        wifi = network.WLAN(network.STA_IF)
+        wifi.active(True)
+        networks = wifi.scan()
+        networks.sort(key=lambda w: -w[3])
+        for net in networks:
+            print(net)
 
         # Start the wifi AP
         wifi_start_access_point(essid)
@@ -116,32 +135,6 @@ class MyApp:
         print('Looping forever...')
         loop.run_forever()
 
-    async def handle_http_connection(self, reader, writer):
-        gc.collect()
-
-        # Get HTTP request line
-        data = await reader.readline()
-        request_line = data.decode()
-        addr = writer.get_extra_info('peername')
-        print('Received {} from {}'.format(request_line.strip(), addr))
-
-        # Read headers, to make client happy (else curl prints an error)
-        while True:
-            gc.collect()
-            line = await reader.readline()
-            if line == b'\r\n': break
-
-        # Handle the request
-        if len(request_line) > 0:
-            response = 'HTTP/1.0 200 OK\r\n\r\n'
-            with open('index.html') as f:
-                response += f.read()
-            await writer.awrite(response)
-
-        # Close the socket
-        await writer.aclose()
-        # print("client socket closed")
-
     async def run_dns_server(self):
         """ function to handle incoming dns requests """
         udps = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -151,17 +144,14 @@ class MyApp:
         while True:
             try:
                 # gc.collect()
-                if IS_UASYNCIO_V3:
-                    yield asyncio.core._io_queue.queue_read(udps)
-                else:
-                    yield asyncio.IORead(udps)
+                yield asyncio.core._io_queue.queue_read(udps)
                 data, addr = udps.recvfrom(4096)
-                print("Incoming DNS request...")
+                # print("Incoming DNS request...")
 
                 DNS = DNSQuery(data)
                 udps.sendto(DNS.response(SERVER_IP), addr)
 
-                print("Replying: {:s} -> {:s}".format(DNS.domain, SERVER_IP))
+                # print("Replying: {:s} -> {:s}".format(DNS.domain, SERVER_IP))
 
             except Exception as e:
                 print("DNS server error:", e)
