@@ -70,7 +70,29 @@ class DNSQuery:
             packet += bytes(map(int, ip.split('.')))  # 4bytes of IP
         # print(packet)
         return packet
+    
+ 
+from microdot import Microdot, send_file, redirect
 
+app = Microdot()
+
+@app.route('/')
+async def index(request):
+    return send_file('index.html')
+
+@app.route("/generate_204")
+async def index(request):
+    return redirect("/")
+
+@app.post("/save")
+async def save(req):
+    with open('wifi-creds.txt', 'w+') as creds:
+        creds.write(req.form.get('ssid')+'\n')
+        creds.write(req.form.get('password'))
+    return redirect("/?credentials-stored")
+
+async def start_server():
+    return await app.start_server(debug=True, port=80)
 
 class MyApp:
     async def start(self, essid='myssid'):
@@ -78,15 +100,14 @@ class MyApp:
         loop = asyncio.get_event_loop()
 
         # Add global exception handler
-        if IS_UASYNCIO_V3:
-            loop.set_exception_handler(_handle_exception)
+        loop.set_exception_handler(_handle_exception)
 
         # Start the wifi AP
         wifi_start_access_point(essid)
 
         # Create the server and add task to event loop
-        server = asyncio.start_server(self.handle_http_connection, "0.0.0.0", 80)
-        loop.create_task(server)
+        # server = asyncio.start_server(self.handle_http_connection, "0.0.0.0", 80)
+        loop.create_task(start_server())
 
         # Start the DNS server task
         loop.create_task(self.run_dns_server())
