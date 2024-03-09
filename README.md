@@ -82,7 +82,7 @@ Built upon
 
 References
 
-- http://docs.micropython.org/en/latest/library/uasyncio.html
+- https://docs.micropython.org/en/v1.14/library/uasyncio.html
 - https://github.com/peterhinch/micropython-async/blob/master/v3/README.md
 - https://github.com/peterhinch/micropython-async/blob/master/v3/docs/TUTORIAL.md
 - https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5
